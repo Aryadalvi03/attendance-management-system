@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Student, AttendanceRecord } from "@/app/page"
 import { FileText, TrendingUp, Users, Download, BarChart3, PiIcon as PieIcon, Activity, ArrowLeft } from "lucide-react"
@@ -18,17 +17,15 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
   PieChart as RechartsPieChart,
   Cell,
-  Pie, // Added Pie import
+  Pie,
 } from "recharts"
 
 interface ReportsProps {
   students: Student[]
   attendance: AttendanceRecord[]
-  onBack: () => void // Added onBack prop for navigation
+  onBack: () => void
 }
 
 export function Reports({ students, attendance, onBack }: ReportsProps) {
@@ -116,54 +113,6 @@ export function Reports({ students, attendance, onBack }: ReportsProps) {
       }))
   })()
 
-  // Class-wise statistics
-  const classStats = classes.map((className) => {
-    const classStudents = filteredStudents.filter((s) => s.class === className)
-    const classAttendance = filteredAttendance.filter((r) => r.class === className)
-    const classPresent = classAttendance.filter((r) => r.status === "Present").length
-    const classLate = classAttendance.filter((r) => r.status === "Late").length
-    const classTotal = classAttendance.length
-
-    return {
-      class: className,
-      students: classStudents.length,
-      totalRecords: classTotal,
-      attendanceRate: classTotal > 0 ? Math.round(((classPresent + classLate) / classTotal) * 100) : 0,
-      punctualityRate: classTotal > 0 ? Math.round((classPresent / classTotal) * 100) : 0,
-    }
-  })
-
-  // Department-wise statistics
-  const departmentStats = departments.map((dept) => {
-    const deptStudents = filteredStudents.filter((s) => s.department === dept)
-    const deptAttendance = filteredAttendance.filter((r) => r.department === dept)
-    const deptPresent = deptAttendance.filter((r) => r.status === "Present").length
-    const deptLate = deptAttendance.filter((r) => r.status === "Late").length
-    const deptTotal = deptAttendance.length
-
-    return {
-      department: dept,
-      students: deptStudents.length,
-      totalRecords: deptTotal,
-      attendanceRate: deptTotal > 0 ? Math.round(((deptPresent + deptLate) / deptTotal) * 100) : 0,
-      punctualityRate: deptTotal > 0 ? Math.round((deptPresent / deptTotal) * 100) : 0,
-    }
-  })
-
-  // Method-wise statistics
-  const methodStats = (() => {
-    const methods = new Map<string, number>()
-    filteredAttendance.forEach((record) => {
-      methods.set(record.method, (methods.get(record.method) || 0) + 1)
-    })
-
-    return Array.from(methods.entries()).map(([method, count]) => ({
-      method,
-      count,
-      percentage: totalRecords > 0 ? Math.round((count / totalRecords) * 100) : 0,
-    }))
-  })()
-
   // Status distribution for pie chart
   const statusDistribution = [
     { name: "Present", value: presentRecords, color: "#10b981" },
@@ -182,9 +131,6 @@ export function Reports({ students, attendance, onBack }: ReportsProps) {
         overallAttendanceRate,
         punctualityRate,
       },
-      classStats,
-      departmentStats,
-      methodStats,
       dailyTrend,
     }
 
@@ -328,11 +274,9 @@ export function Reports({ students, attendance, onBack }: ReportsProps) {
       </div>
 
       <Tabs defaultValue="trends" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="trends">Trends</TabsTrigger>
           <TabsTrigger value="breakdown">Breakdown</TabsTrigger>
-          <TabsTrigger value="methods">Methods</TabsTrigger>
-          <TabsTrigger value="comparison">Comparison</TabsTrigger>
         </TabsList>
 
         <TabsContent value="trends" className="space-y-6">
@@ -378,7 +322,7 @@ export function Reports({ students, attendance, onBack }: ReportsProps) {
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
-                      label={({ name, percentage }) => `${name}: ${percentage}%`}
+                      label={({ name, value }) => `${name}: ${value}`}
                     >
                       {statusDistribution.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
@@ -393,141 +337,26 @@ export function Reports({ students, attendance, onBack }: ReportsProps) {
         </TabsContent>
 
         <TabsContent value="breakdown" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Class-wise Statistics */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Class-wise Performance</CardTitle>
-                <CardDescription>Attendance statistics by class</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {classStats.map((stat) => (
-                    <div key={stat.class} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <div className="font-medium">{stat.class}</div>
-                        <div className="text-sm text-muted-foreground">{stat.students} students</div>
-                      </div>
-                      <div className="text-right">
-                        <Badge
-                          variant={
-                            stat.attendanceRate >= 80
-                              ? "default"
-                              : stat.attendanceRate >= 60
-                                ? "secondary"
-                                : "destructive"
-                          }
-                        >
-                          {stat.attendanceRate}%
-                        </Badge>
-                        <div className="text-xs text-muted-foreground mt-1">Punctuality: {stat.punctualityRate}%</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Department-wise Statistics */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Department-wise Performance</CardTitle>
-                <CardDescription>Attendance statistics by department</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {departmentStats.map((stat) => (
-                    <div key={stat.department} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <div className="font-medium">{stat.department}</div>
-                        <div className="text-sm text-muted-foreground">{stat.students} students</div>
-                      </div>
-                      <div className="text-right">
-                        <Badge
-                          variant={
-                            stat.attendanceRate >= 80
-                              ? "default"
-                              : stat.attendanceRate >= 60
-                                ? "secondary"
-                                : "destructive"
-                          }
-                        >
-                          {stat.attendanceRate}%
-                        </Badge>
-                        <div className="text-xs text-muted-foreground mt-1">Punctuality: {stat.punctualityRate}%</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="methods" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Attendance Methods Usage</CardTitle>
-              <CardDescription>How attendance is being marked across the system</CardDescription>
+              <CardTitle>Attendance Summary</CardTitle>
+              <CardDescription>Overall attendance statistics</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={methodStats}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="method" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#10b981" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="comparison" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance Comparison</CardTitle>
-              <CardDescription>Compare attendance rates across classes and departments</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Class</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Students</TableHead>
-                    <TableHead>Attendance Rate</TableHead>
-                    <TableHead>Punctuality Rate</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {classStats.map((stat) => (
-                    <TableRow key={stat.class}>
-                      <TableCell className="font-medium">{stat.class}</TableCell>
-                      <TableCell>{students.find((s) => s.class === stat.class)?.department || "N/A"}</TableCell>
-                      <TableCell>{stat.students}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Progress value={stat.attendanceRate} className="w-16" />
-                          <span className="text-sm">{stat.attendanceRate}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{stat.punctualityRate}%</TableCell>
-                      <TableCell>
-                        {stat.attendanceRate >= 80 ? (
-                          <Badge variant="default">Excellent</Badge>
-                        ) : stat.attendanceRate >= 60 ? (
-                          <Badge variant="secondary">Good</Badge>
-                        ) : (
-                          <Badge variant="destructive">Needs Attention</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <span className="font-medium">Present Records</span>
+                  <Badge variant="default">{presentRecords}</Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <span className="font-medium">Late Records</span>
+                  <Badge variant="secondary">{lateRecords}</Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <span className="font-medium">Absent Records</span>
+                  <Badge variant="destructive">{absentRecords}</Badge>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
